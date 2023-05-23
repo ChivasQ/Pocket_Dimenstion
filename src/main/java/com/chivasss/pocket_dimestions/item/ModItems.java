@@ -4,10 +4,7 @@ import com.chivasss.pocket_dimestions.PocketDim;
 import com.chivasss.pocket_dimestions.block.ModBlocks;
 import com.chivasss.pocket_dimestions.item.custom.*;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemNameBlockItem;
-import net.minecraft.world.item.MinecartItem;
-import net.minecraft.world.item.SnowballItem;
+import net.minecraft.world.item.*;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.registries.DeferredRegister;
 import net.minecraftforge.registries.ForgeRegistries;
@@ -43,6 +40,13 @@ public class ModItems {
     public static final RegistryObject<Item> STICK_OF_DYNAMITE = ITEMS.register("stick_of_dynamite",
             () -> new StickofDynamite(new Item.Properties()
                     .tab(ModCreativeModTab.MOD_TAB)));
+
+    public static final RegistryObject<Item> CHALK = ITEMS.register("chalk",
+            () -> new Item(new Item.Properties()
+                    .tab(ModCreativeModTab.MOD_TAB)
+                    .stacksTo(1)
+                    .rarity(Rarity.EPIC)
+                    .durability(100)));
 
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);

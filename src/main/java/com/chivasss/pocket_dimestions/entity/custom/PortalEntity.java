@@ -7,6 +7,7 @@ import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.logging.LogUtils;
 import net.minecraft.commands.arguments.ParticleArgument;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -17,6 +18,7 @@ import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -25,8 +27,12 @@ import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.gameevent.EntityPositionSource;
 import net.minecraft.world.level.material.PushReaction;
 import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.world.phys.shapes.Shapes;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
@@ -75,6 +81,47 @@ public class PortalEntity extends Entity {
     public void setRadius(float p_19713_) {
         if (!this.level.isClientSide) {
             this.getEntityData().set(DATA_RADIUS, p_19713_);
+        }
+
+    }
+
+    public void tick() {
+        super.tick();
+        List<MobEffectInstance> list = Lists.newArrayList();
+        List<LivingEntity> list1 = this.level.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox());
+        if (!list1.isEmpty()) {
+            for (LivingEntity livingentity : list1) {
+                this.victims.put(livingentity, this.tickCount + this.reapplicationDelay);
+
+                for (MobEffectInstance mobeffectinstance1 : list) {
+                    if (mobeffectinstance1.getEffect().isInstantenous()) {
+                        mobeffectinstance1.getEffect().applyInstantenousEffect(this, this.getOwner(), livingentity, mobeffectinstance1.getAmplifier(), 0.5D);
+                    } else {
+                        livingentity.addEffect(new MobEffectInstance(mobeffectinstance1), this);
+                    }
+
+
+                    if (this.durationOnUse != 0) {
+                        this.duration += this.durationOnUse;
+                        if (this.duration <= 0) {
+                            this.discard();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void entityInside(Level level, Entity entity) {
+        if (level instanceof ServerLevel && !entity.isPassenger() && !entity.isVehicle() && entity.canChangeDimensions()) {
+            ResourceKey<Level> resourcekey = level.dimension() == Level.END ? Level.OVERWORLD : Level.END;
+            ServerLevel serverlevel = ((ServerLevel)level).getServer().getLevel(resourcekey);
+            if (serverlevel == null) {
+                return;
+            }
+
+            entity.changeDimension(serverlevel);
         }
 
     }
@@ -133,21 +180,6 @@ public class PortalEntity extends Entity {
         this.getEntityData().set(DATA_PARTICLE, p_19725_);
     }
 
-    protected void setWaiting(boolean p_19731_) {
-        this.getEntityData().set(DATA_WAITING, p_19731_);
-    }
-
-    public boolean isWaiting() {
-        return this.getEntityData().get(DATA_WAITING);
-    }
-
-    public int getDuration() {
-        return this.duration;
-    }
-
-    public void setDuration(int p_19735_) {
-        this.duration = p_19735_;
-    }
 
     @Nullable
     public LivingEntity getOwner() {
